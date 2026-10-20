@@ -1,32 +1,36 @@
-Genetic Patient Similarity Analysis System
-Business Problem
-A healthcare research organization wants to investigate whether patients naturally form groups based on similarities in their genetic and clinical characteristics.Unlike a classification problem, the organization does not have predefined groups. Researchers want to visualize how patients gradually form groups as their similarity increases.
-Project Objective
-Develop a Genetic Patient Similarity Analysis System using Hierarchical Agglomerative Clustering.
-Required Implementation
-The system should:
-Perform data preprocessing.
-Select relevant features.
-Encode categorical variables.
-Standardize numerical features.
-Apply Ward's Hierarchical Agglomerative Clustering.
-Generate a dendrogram.
-Investigate different cluster counts.
-Calculate suitable clustering metrics.
-Interpret the resulting groups.
-Create Flask APIs.
-Develop a Streamlit visualization interface.
-Frontend Requirement
-The Streamlit application should contain:
-Patient Similarity Dashboard
-[Dendrogram]
-Number of Groups:
-[ Select ]
-[Generate Groups]
-Group Information
-The system should allow users to explore how patients are grouped at different levels.
-Critical Thinking Challenge
-Apply both K-Means and Hierarchical Clustering to the same selected features. Compare the resulting groups and explain why the two algorithms may produce different structures.
-Primary Algorithm
-Ward's Hierarchical Agglomerative Clustering
-Dataset link : https://www.kaggle.com/datasets/aibuzz/predict-the-genetic-disorders-datasetof-genomes/data
+# 🧬 Genetic Patient Similarity Analysis System
+
+An end-to-end Machine Learning web application designed to investigate how patients naturally group based on genetic and clinical attributes. The system utilizes **Ward's Hierarchical Agglomerative Clustering** to establish patient relationships, serves predictions via a **Flask RESTful API**, and offers an interactive **Streamlit Dashboard** for visualization and comparative analysis.
+
+---
+
+## 📌 Project Overview
+
+Unlike traditional supervised classification tasks where patient outcomes or diagnoses are predetermined, healthcare researchers often need to explore how patient cohorts form subgroups organically. 
+
+This project solves this challenge by:
+1. Standardizing and encoding complex genetic/clinical patient features.
+2. Building an explicit distance-based hierarchical tree.
+3. Allowing researchers to slice patient cohorts dynamically at different similarity levels.
+4. Comparing hierarchical structure against traditional partitioning algorithms (K-Means).
+
+---
+
+## 🏗️ System Architecture
+
+The project is structured with a clean separation of concerns between backend computation and frontend visualization:
+
+```text
+┌─────────────────────────────────────────┐
+│        Streamlit Dashboard              │  <-- Interactive UI
+│        (streamlit_app.py)               │      - File Upload & Controls
+│  [Dendrogram Plot] [Group Selectors]    │      - Metric Tables & Bar Charts
+└────────────────────┬────────────────────┘
+                     │ HTTP REST API Requests
+                     ▼
+┌─────────────────────────────────────────┐
+│           Flask API Server              │  <-- ML Backend
+│             (app.py)                    │      - Processing Pipelines
+│      [StandardScaler & Encoders]        │      - Ward's Clustering & Matrix
+│      [Metrics Calculation Engine]       │      - K-Means Comparison
+└─────────────────────────────────────────┘
