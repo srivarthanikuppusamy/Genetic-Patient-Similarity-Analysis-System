@@ -1,6 +1,8 @@
 # 🧬 Genetic Patient Similarity Analysis System
 
-An end-to-end Machine Learning web application designed to investigate how patients naturally group based on genetic and clinical attributes. The system utilizes **Ward's Hierarchical Agglomerative Clustering** to establish patient relationships, serves predictions via a **Flask RESTful API**, and offers an interactive **Streamlit Dashboard** for visualization and comparative analysis.
+An end-to-end Machine Learning web application designed to investigate how patients naturally group based on genetic and clinical attributes. The system utilizes **Ward's Hierarchical Agglomerative Clustering** to establish patient relationships and presents an interactive **Streamlit Dashboard** for visualization and comparative analysis.
+
+🚀 **Live Interactive App:** [Genetic Patient Similarity Analysis System](https://genetic-patient-similarity-analysis-system-5fyygdfzchqjcoiu9zl.streamlit.app/)
 
 ---
 
@@ -18,19 +20,27 @@ This project solves this challenge by:
 
 ## 🏗️ System Architecture
 
-The project is structured with a clean separation of concerns between backend computation and frontend visualization:
+The application runs in-memory using Streamlit to perform real-time data cleaning, distance matrix calculation, and clustering validation metrics:
 
 ```text
-┌─────────────────────────────────────────┐
-│        Streamlit Dashboard              │  <-- Interactive UI
-│        (streamlit_app.py)               │      - File Upload & Controls
-│  [Dendrogram Plot] [Group Selectors]    │      - Metric Tables & Bar Charts
-└────────────────────┬────────────────────┘
-                     │ HTTP REST API Requests
-                     ▼
-┌─────────────────────────────────────────┐
-│           Flask API Server              │  <-- ML Backend
-│             (app.py)                    │      - Processing Pipelines
-│      [StandardScaler & Encoders]        │      - Ward's Clustering & Matrix
-│      [Metrics Calculation Engine]       │      - K-Means Comparison
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│              Streamlit Web Application                      │
+│   (https://genetic-patient-similarity-analysis-system...)   │
+│                                                             │
+│   - Patient Genome CSV Upload                               │
+│   - Plotly Hierarchical Dendrogram Plot                     │
+│   - Interactive Grouping Controls (N = 2 to 10)             │
+│   - Live Metrics (Silhouette, Davies-Bouldin, Calinski-H.)  │
+│   - Side-by-Side Algorithm Comparison (Ward's vs K-Means)   │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ Imports & Executes
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 ML Pipeline Core                            │
+│                 (model_utils.py)                            │
+│                                                             │
+│   - String Missing Value Cleaning                           │
+│   - ColumnTransformer (StandardScaler + OneHotEncoder)      │
+│   - Scipy Linkage Matrix (Ward's Minimum Variance)          │
+│   - Agglomerative & K-Means Clustering Models               │
+└─────────────────────────────────────────────────────────────┘
