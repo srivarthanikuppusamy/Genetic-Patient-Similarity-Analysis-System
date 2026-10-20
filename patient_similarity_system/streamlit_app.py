@@ -1,44 +1,63 @@
 import streamlit as st
-import requests
 import numpy as np
 import pandas as pd
 import plotly.figure_factory as ff
 import plotly.express as px
+from model_utils import PatientSimilarityPipeline
 
-API_URL = "http://localhost:5000/api"
-
+# Page Configuration
 st.set_page_config(page_title="Genetic Patient Similarity System", layout="wide")
 st.title("🧬 Genetic Patient Similarity Analysis System")
 st.markdown("Investigate natural patient groups based on genetic and clinical features using **Ward's Hierarchical Agglomerative Clustering**.")
 
-# Sidebar - Dataset Input
+# Initialize the ML Pipeline state
+if 'pipeline' not in st.session_state:
+    st.session_state['pipeline'] = PatientSimilarityPipeline()
+
+pipeline = st.session_state['pipeline']
+
+# Sidebar - Dataset Upload
 st.sidebar.header("Data Source")
 uploaded_file = st.sidebar.file_uploader("Upload Patient Genomes CSV", type=['csv'])
 
 if uploaded_file is not None:
-    if 'data_uploaded' not in st.session_state:
+    # Check if a new file has been uploaded
+    if 'data_uploaded' not in st.session_state or st.session_state.get('uploaded_filename') != uploaded_file.name:
         with st.spinner("Preprocessing data and computing hierarchy linkage..."):
-            files = {'file': (uploaded_file.name, uploaded_file.getvalue(), 'text/csv')}
-            res = requests.post(f"{API_URL}/upload", files=files)
-            if res.status_code == 200:
+            try:
+                df = pd.read_csv(uploaded_file)
+                
+                # Execute in-memory processing pipeline
+                X_scaled, df_clean = pipeline.preprocess_data(df)
+                linkage_mat = pipeline.compute_linkage()
+                
+                # Cache results in Session State
                 st.session_state['data_uploaded'] = True
-                st.session_state['upload_res'] = res.json()
+                st.session_state['uploaded_filename'] = uploaded_file.name
+                st.session_state['raw_df'] = df_clean
+                st.session_state['X_scaled'] = X_scaled
+                st.session_state['linkage_mat'] = linkage_mat
                 st.sidebar.success("Data processed successfully!")
-            else:
-                st.error("Failed to process dataset.")
+            except Exception as e:
+                st.sidebar.error(f"Error processing file: {e}")
 
+# Render Dashboard Controls and Visualizations
 if st.session_state.get('data_uploaded'):
-    upload_data = st.session_state['upload_res']
-    linkage_mat = np.array(upload_data['linkage_matrix'])
+    linkage_mat = st.session_state['linkage_mat']
 
     st.subheader("Patient Similarity Dashboard")
     
-    # 1. Dendrogram Visualization
+    # 1. Dendrogram Tree Plot
     st.markdown("### Hierarchical Clustering Dendrogram")
     st.markdown("Visualizing how patient clusters merge bottom-up based on genetic distance.")
     
     fig_dendro = ff.create_dendrogram(linkage_mat, orientation='left')
-    fig_dendro.update_layout(width=1000, height=500, xaxis_title="Distance (Ward's Linkage)", yaxis_title="Patient Indices")
+    fig_dendro.update_layout(
+        width=1000, 
+        height=500, 
+        xaxis_title="Distance (Ward's Linkage)", 
+        yaxis_title="Patient Indices"
+    )
     st.plotly_chart(fig_dendro, use_container_width=True)
 
     st.divider()
@@ -51,16 +70,19 @@ if st.session_state.get('data_uploaded'):
         n_clusters = st.selectbox("Number of Groups:", options=list(range(2, 11)), index=1)
         btn_generate = st.button("Generate Groups")
 
-    if btn_generate or 'cluster_res' in st.session_state:
-        if btn_generate:
-            res = requests.post(f"{API_URL}/cluster", json={"n_clusters": n_clusters})
-            st.session_state['cluster_res'] = res.json()
-        
-        cluster_data = st.session_state['cluster_res']
+    if btn_generate or 'hier_labels' in st.session_state:
+        if btn_generate or st.session_state.get('current_n') != n_clusters:
+            hier_labels, hier_metrics = pipeline.fit_hierarchical_clustering(n_clusters)
+            st.session_state['hier_labels'] = hier_labels
+            st.session_state['hier_metrics'] = hier_metrics
+            st.session_state['current_n'] = n_clusters
+
+        hier_metrics = st.session_state['hier_metrics']
+        hier_labels = st.session_state['hier_labels']
 
         with col2:
             st.markdown("### Group Information & Quality Metrics")
-            m = cluster_data['metrics']
+            m = hier_metrics
             
             mc1, mc2, mc3 = st.columns(3)
             mc1.metric("Silhouette Score", f"{m['silhouette']:.3f}")
@@ -68,8 +90,18 @@ if st.session_state.get('data_uploaded'):
             mc3.metric("Calinski-Harabasz Index", f"{m['calinski_harabasz']:.1f}")
 
             # Distribution Chart
-            dist_df = pd.DataFrame(list(cluster_data['cluster_distribution'].items()), columns=['Cluster', 'Patient Count'])
-            fig_dist = px.bar(dist_df, x='Cluster', y='Patient Count', title="Patient Distribution across Clusters", color='Cluster')
+            df_result = st.session_state['raw_df'].copy()
+            df_result['Cluster'] = hier_labels
+            cluster_counts = df_result['Cluster'].value_counts().reset_index()
+            cluster_counts.columns = ['Cluster', 'Patient Count']
+            
+            fig_dist = px.bar(
+                cluster_counts, 
+                x='Cluster', 
+                y='Patient Count', 
+                title="Patient Distribution across Clusters", 
+                color='Cluster'
+            )
             st.plotly_chart(fig_dist, use_container_width=True)
 
     st.divider()
@@ -78,15 +110,26 @@ if st.session_state.get('data_uploaded'):
     st.subheader("💡 Critical Thinking Challenge: Ward's Hierarchical vs. K-Means")
     
     if st.button("Run Comparison Analysis"):
-        comp_res = requests.post(f"{API_URL}/compare", json={"n_clusters": n_clusters}).json()
-        
-        h_m = comp_res['hierarchical']['metrics']
-        k_m = comp_res['kmeans']['metrics']
+        current_n = st.session_state.get('current_n', n_clusters)
+        hier_labels, hier_metrics = pipeline.fit_hierarchical_clustering(current_n)
+        kmeans_labels, kmeans_metrics = pipeline.fit_kmeans_clustering(current_n)
         
         comp_df = pd.DataFrame({
-            'Metric': ['Silhouette Score (Higher = Better)', 'Davies-Bouldin (Lower = Better)', 'Calinski-Harabasz (Higher = Better)'],
-            "Ward's Hierarchical": [h_m['silhouette'], h_m['davies_bouldin'], h_m['calinski_harabasz']],
-            'K-Means': [k_m['silhouette'], k_m['davies_bouldin'], k_m['calinski_harabasz']]
+            'Metric': [
+                'Silhouette Score (Higher = Better)', 
+                'Davies-Bouldin (Lower = Better)', 
+                'Calinski-Harabasz (Higher = Better)'
+            ],
+            "Ward's Hierarchical": [
+                hier_metrics['silhouette'], 
+                hier_metrics['davies_bouldin'], 
+                hier_metrics['calinski_harabasz']
+            ],
+            'K-Means': [
+                kmeans_metrics['silhouette'], 
+                kmeans_metrics['davies_bouldin'], 
+                kmeans_metrics['calinski_harabasz']
+            ]
         })
         
         st.table(comp_df)
