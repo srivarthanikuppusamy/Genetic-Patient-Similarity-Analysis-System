@@ -18,6 +18,19 @@ This project solves this challenge by:
 
 ---
 
+## 📊 Dataset Reference
+
+This project is built for analysis using the **Predict the Genetic Disorders Dataset of Genomes** from Kaggle:
+
+👉 **Dataset Link:** [Predict the Genetic Disorders Dataset of Genomes (Kaggle)](https://www.kaggle.com/datasets/aibuzz/predict-the-genetic-disorders-datasetof-genomes/data)
+
+### How to test with the dataset:
+1. Download the dataset CSV file from the Kaggle link above.
+2. Launch the [Live Streamlit Dashboard](https://genetic-patient-similarity-analysis-system-5fyygdfzchqjcoiu9zl.streamlit.app/).
+3. Click **Browse files** in the left sidebar and upload the CSV file to generate the dendrogram and explore patient groupings.
+
+---
+
 ## 🏗️ System Architecture
 
 The application runs in-memory using Streamlit to perform real-time data cleaning, distance matrix calculation, and clustering validation metrics:
